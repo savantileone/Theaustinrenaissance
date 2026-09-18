@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>TAR Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1a1510;
+    --paper:#ede6d6;
+    --paper-soft:#f5f0e4;
+    --cream:#f3ecdd;
+    --red:#b20710;
+    --red-bright:#e50914;
+    --brick:#9c3b2e;
+    --green:#1f6b4a;
+    --line:rgba(26,21,16,0.16);
+    --line-light:rgba(243,236,221,0.18);
+  }
+  *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.5;}
+  h1,h2,h3{font-family:'Big Shoulders Display',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:.01em;line-height:1;margin:0;}
+  button{font-family:inherit;font-size:inherit;cursor:pointer;}
+  :focus-visible{outline:3px solid var(--red-bright);outline-offset:2px;}
+  a{color:var(--brick);}
+
+  /* ---- Lock screen ---- */
+  .lock{min-height:100vh;background:var(--ink);color:var(--cream);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .lock-card{width:100%;max-width:380px;}
+  .lock-card h1{font-size:56px;color:var(--cream);}
+  .lock-card h1 span{color:var(--red-bright);}
+  .lock-card p{color:rgba(243,236,221,.75);margin:14px 0 26px;font-family:'Source Serif 4',serif;font-size:17px;}
+  .lock-card label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px;}
+  .lock-card input{width:100%;padding:13px 14px;font:inherit;background:transparent;color:var(--cream);border:1.5px solid var(--line-light);border-radius:2px;}
+  .lock-card input:focus{border-color:var(--red-bright);outline:none;}
+  .lock-card .btn{width:100%;margin-top:16px;}
+  .lock-error{margin-top:14px;color:#ff9a8f;font-size:14px;min-height:1.4em;}
+
+  /* ---- Buttons ---- */
+  .btn{display:inline-block;padding:11px 20px;border-radius:2px;border:1.5px solid var(--red);background:var(--red);color:var(--cream);font-weight:600;}
+  .btn:hover:not(:disabled){background:#8f050d;border-color:#8f050d;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);padding:8px 14px;}
+  .btn.ghost:hover:not(:disabled){border-color:var(--ink);background:transparent;}
+  .btn.danger{background:transparent;color:var(--red);border-color:var(--line);padding:8px 14px;margin-left:auto;}
+  .btn.danger:hover:not(:disabled){border-color:var(--red);background:transparent;}
+
+  /* ---- App shell ---- */
+  header.top{background:var(--ink);color:var(--cream);}
+  .top-row{max-width:900px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:16px;}
+  .brand{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:28px;color:var(--red-bright);letter-spacing:.02em;}
+  .brand small{font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:14px;color:var(--cream);opacity:.75;margin-left:10px;letter-spacing:0;}
+  .top-row .spacer{flex:1;}
+  .top-link{color:var(--cream);font-size:14px;text-decoration:none;opacity:.85;background:none;border:none;padding:6px 0;}
+  .top-link:hover{opacity:1;text-decoration:underline;}
+
+  nav.tabs{background:var(--ink);border-top:1px solid var(--line-light);}
+  .tabs-row{max-width:900px;margin:0 auto;padding:0 12px;display:flex;overflow-x:auto;scrollbar-width:none;}
+  .tabs-row::-webkit-scrollbar{display:none;}
+  .tab{background:none;border:none;color:var(--cream);opacity:.7;padding:13px 14px;font-weight:500;border-bottom:3px solid transparent;white-space:nowrap;position:relative;}
+  .tab:hover{opacity:1;}
+  .tab.active{opacity:1;border-bottom-color:var(--red-bright);}
+  .tab .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red-bright);margin-left:7px;vertical-align:middle;}
+  .tab .count{display:inline-block;min-width:20px;padding:0 6px;margin-left:7px;border-radius:10px;background:var(--red-bright);color:var(--ink);font-size:12px;font-weight:600;text-align:center;}
+
+  main{max-width:900px;margin:0 auto;padding:32px 20px 140px;}
+  .panel-head{margin-bottom:26px;}
+  .panel-head h2{font-size:44px;}
+  .panel-head p{margin:10px 0 0;max-width:62ch;opacity:.8;}
+
+  /* ---- Fields ---- */
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;}
+  .field{display:block;grid-column:1 / -1;}
+  .field.half{grid-column:span 1;}
+  .field > span{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px;}
+  .field input[type=text],.field input[type=url],.field input[type=date],.field textarea{
+    width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:#fff9;border:1px solid var(--line);border-radius:2px;
+  }
+  .field textarea{min-height:96px;resize:vertical;font-family:'Source Serif 4',serif;font-size:16px;line-height:1.5;}
+  .field input:focus,.field textarea:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px rgba(178,7,16,.25);}
+  .help{display:block;font-size:13px;opacity:.68;margin-top:4px;font-weight:400;}
+  .check{grid-column:1 / -1;display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-weight:500;}
+  .check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--red);flex:none;}
+  .check .help{margin-top:2px;}
+  @media (max-width:640px){ .fields{grid-template-columns:1fr;} .field.half{grid-column:1 / -1;} .panel-head h2{font-size:38px;} }
+
+  .group{background:var(--paper-soft);border:1px solid var(--line);border-left:4px solid var(--brick);padding:22px 22px 26px;margin-bottom:22px;}
+  .group h3{font-size:26px;margin-bottom:4px;}
+  .group > p{margin:0 0 18px;opacity:.75;font-size:14px;}
+
+  /* ---- Item cards ---- */
+  details.item{background:var(--paper-soft);border:1px solid var(--line);margin-bottom:10px;}
+  details.item[open]{border-color:var(--ink);}
+  details.item summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:15px 18px;}
+  details.item summary::-webkit-details-marker{display:none;}
+  details.item summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(-45deg);transition:transform .15s;flex:none;margin-right:4px;}
+  details.item[open] summary::before{transform:rotate(45deg);}
+  .sum-title{font-family:'Source Serif 4',serif;font-weight:600;font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chips{display:flex;gap:6px;flex:none;}
+  .chip{font-size:12px;font-weight:600;padding:2px 8px;border:1px solid var(--line);border-radius:10px;background:var(--paper);}
+  .chip.draft{color:var(--brick);border-color:var(--brick);}
+  .chip.on{color:var(--green);border-color:var(--green);}
+  .item-body{padding:6px 18px 20px;border-top:1px solid var(--line);}
+  .item-body .fields{margin-top:16px;}
+  .item-actions{display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px dashed var(--line);flex-wrap:wrap;}
+  @media (max-width:640px){ .chips{display:none;} }
+
+  .add{width:100%;margin-top:14px;padding:16px;background:transparent;border:2px dashed var(--brick);color:var(--brick);font-weight:600;border-radius:2px;}
+  .add:hover{background:rgba(156,59,46,.08);}
+  .empty{padding:26px 0;opacity:.7;}
+
+  /* ---- Inbox ---- */
+  .inbox-sec{margin-bottom:34px;}
+  .inbox-sec h3{font-size:28px;margin-bottom:14px;}
+  .msg{background:var(--paper-soft);border:1px solid var(--line);border-left:4px solid var(--red);padding:16px 18px;margin-bottom:12px;}
+  .msg.done{border-left-color:var(--line);opacity:.65;}
+  .msg-head{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-bottom:8px;}
+  .msg-head strong{font-family:'Source Serif 4',serif;font-size:18px;}
+  .msg-head .when{font-size:13px;opacity:.65;margin-left:auto;}
+  .msg p{margin:6px 0;}
+  .msg .pre{white-space:pre-wrap;font-family:'Source Serif 4',serif;font-size:16px;}
+  .msg .item-actions{margin-top:12px;padding-top:12px;}
+
+  /* ---- Help ---- */
+  .help-body{max-width:64ch;font-family:'Source Serif 4',serif;font-size:17px;}
+  .help-body h3{font-size:26px;margin:28px 0 8px;}
+  .help-body ul{padding-left:20px;margin:8px 0;}
+  .help-body li{margin:6px 0;}
+
+  /* ---- Save bar + toast ---- */
+  #savebar{position:fixed;left:0;right:0;bottom:0;background:var(--ink);color:var(--cream);border-top:3px solid var(--red-bright);z-index:20;}
+  .savebar-row{max-width:900px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;}
+  #savestate{flex:1;font-weight:500;}
+  #savestate.unsaved{color:#ffd9a8;}
+  #toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--green);color:#fff;padding:12px 18px;border-radius:2px;z-index:30;max-width:90vw;font-weight:500;box-shadow:0 6px 24px rgba(0,0,0,.25);}
+  #toast.err{background:var(--red);}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK SCREEN ============ -->
+<div class="lock" id="lock">
+  <form class="lock-card" id="lockForm" autocomplete="off">
+    <h1>TAR <span>Editor</span></h1>
+    <p>Editors only. Enter the passphrase to change what’s on the site.</p>
+    <label for="pw">Passphrase</label>
+    <input type="password" id="pw" required autofocus>
+    <button class="btn" type="submit" id="unlockBtn">Unlock</button>
+    <div class="lock-error" id="lockError" role="alert"></div>
+  </form>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">TAR<small>Editor</small></div>
+      <div class="spacer"></div>
+      <a class="top-link" href="./" target="_blank" rel="noopener">View site</a>
+      <button class="top-link" id="lockBtn" type="button">Lock</button>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <div class="tabs-row" id="tabs"></div>
+    </nav>
+  </header>
+
+  <main id="panel"></main>
+
+  <div id="savebar" hidden>
+    <div class="savebar-row">
+      <div id="savestate">All changes saved</div>
+      <button class="btn" id="saveBtn" type="button" disabled>Save changes</button>
+    </div>
+  </div>
+  <div id="toast" hidden role="status"></div>
+</div>
+
+<script src="tar-config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var API = (window.TAR_API || '').trim();
+  var CONNECTED = API && API.indexOf('PASTE_') !== 0;
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  var isTrue = function (v) { return String(v).toUpperCase() === 'TRUE'; };
+  var uid = function () { return Math.random().toString(36).slice(2, 10); };
+
+  // ---------- What can be edited ----------
+  var COLL = {
+    episodes: {
+      label: 'Episodes', single: 'episode',
+      blurb: 'Produced episodes for the Videos page. They show in this order.',
+      titleOf: function (r) { return r.title || 'Untitled episode'; },
+      fields: [
+        { k: 'number', label: 'Episode number', type: 'text', ph: '01', half: 1 },
+        { k: 'date', label: 'Date', type: 'date', half: 1 },
+        { k: 'meta', label: 'Label line', type: 'text', ph: 'JUNE 19 COVERAGE · 8 MIN', help: 'Small red text above the title. Use COMING SOON for episodes that aren’t out yet.' },
+        { k: 'title', label: 'Title', type: 'text' },
+        { k: 'description', label: 'Description', type: 'textarea' },
+        { k: 'video_url', label: 'Video link', type: 'url', ph: 'https://www.youtube.com/watch?v=…', help: 'Adds a “Watch the episode” link. Leave empty if it isn’t out yet.' },
+        { k: 'home', label: 'Show on the home page', type: 'bool' },
+        { k: 'published', label: 'Published', type: 'bool', def: 'TRUE', help: 'Uncheck to keep it as a draft that visitors can’t see.' }
+      ]
+    },
+    raw: {
+      label: 'Raw footage', single: 'raw footage entry',
+      blurb: 'Unedited interviews and tape, listed on the Videos page under Raw Footage.',
+      titleOf: function (r) { return r.title || 'Untitled footage'; },
+      fields: [
+        { k: 'code', label: 'Code', type: 'text', ph: 'RAW · 005', half: 1, help: 'Leave empty to number it automatically.' },
+        { k: 'length', label: 'Length', type: 'text', ph: '14 MIN', half: 1 },
+        { k: 'title', label: 'Title', type: 'text' },
+        { k: 'video_url', label: 'Video link', type: 'url', ph: 'https://www.youtube.com/watch?v=…' },
+        { k: 'description', label: 'Short description', type: 'textarea', help: 'Only shown if you put this on the home page.' },
+        { k: 'date', label: 'Date', type: 'date', half: 1 },
+        { k: 'home', label: 'Show on the home page', type: 'bool' },
+        { k: 'published', label: 'Published', type: 'bool', def: 'TRUE', help: 'Uncheck to keep it as a draft that visitors can’t see.' }
+      ]
+    },
+    articles: {
+      label: 'Articles', single: 'article',
+      blurb: 'One article can be the Feature at the top of the Articles page. The rest fill the grid below it.',
+      titleOf: function (r) { return r.title || 'Untitled article'; },
+      fields: [
+        { k: 'tag', label: 'Topic', type: 'text', ph: 'History, Music, Politics…', half: 1 },
+        { k: 'date', label: 'Date', type: 'date', half: 1 },
+        { k: 'title', label: 'Headline', type: 'text' },
+        { k: 'summary', label: 'Summary', type: 'textarea', rows: 3 },
+        { k: 'byline', label: 'Byline', type: 'text', ph: 'By TAR Staff' },
+        { k: 'url', label: 'Link to the full article', type: 'url', help: 'Where the headline should lead. Leave empty if there’s no page for it yet.' },
+        { k: 'featured', label: 'Make this the Feature', type: 'bool', help: 'Only one article can be the Feature. Choosing this one clears the others.' },
+        { k: 'home', label: 'Show on the home page', type: 'bool' },
+        { k: 'published', label: 'Published', type: 'bool', def: 'TRUE', help: 'Uncheck to keep it as a draft that visitors can’t see.' }
+      ]
+    },
+    staff: {
+      label: 'Staff', single: 'person',
+      blurb: 'Everyone listed on the Staff page, in this order.',
+      titleOf: function (r) { return r.name || 'New person'; },
+      fields: [
+        { k: 'name', label: 'Name', type: 'text', half: 1 },
+        { k: 'role', label: 'Role', type: 'text', half: 1 },
+        { k: 'bio', label: 'Bio', type: 'textarea', rows: 3 },
+        { k: 'photo_url', label: 'Photo link', type: 'url', help: 'A link to a square photo. Without one, the card shows their initials.' },
+        { k: 'published', label: 'Published', type: 'bool', def: 'TRUE', help: 'Uncheck to hide this person without deleting them.' }
+      ]
+    }
+  };
+
+  var SETTINGS = [
+    { title: 'Home page top', note: 'Leave a box empty to keep the wording already on the page.', fields: [
+      { k: 'hero_eyebrow', label: 'Line above the headline', type: 'text' },
+      { k: 'hero_line1', label: 'Headline, first line', type: 'text' },
+      { k: 'hero_line2', label: 'Headline, second line', type: 'text', half: 1 },
+      { k: 'hero_accent', label: 'Red ending of the second line', type: 'text', half: 1 },
+      { k: 'hero_sub', label: 'Text under the headline', type: 'textarea', rows: 3 },
+      { k: 'mission_quote', label: 'Mission quote', type: 'textarea', rows: 4, help: 'Quotation marks are added for you.' }
+    ] },
+    { title: 'Who we are', note: 'The four paragraphs on the Who We Are page. The first one is larger.', fields: [
+      { k: 'who_lead', label: 'Opening paragraph', type: 'textarea', rows: 4 },
+      { k: 'who_p2', label: 'Paragraph 2', type: 'textarea', rows: 4 },
+      { k: 'who_p3', label: 'Paragraph 3', type: 'textarea', rows: 4 },
+      { k: 'who_p4', label: 'Paragraph 4', type: 'textarea', rows: 4 }
+    ] },
+    { title: 'Contact and links', note: 'Used on the Contact, Find Us and Support pages.', fields: [
+      { k: 'contact_email', label: 'Editorial email', type: 'text' },
+      { k: 'discord_url', label: 'Discord invite link', type: 'url' },
+      { k: 'youtube_url', label: 'YouTube link', type: 'url' },
+      { k: 'instagram_url', label: 'Instagram link', type: 'url' },
+      { k: 'tiktok_url', label: 'TikTok link', type: 'url' },
+      { k: 'patreon_url', label: 'Patreon link', type: 'url' },
+      { k: 'cashapp_tag', label: 'Cash App name', type: 'text', ph: '$yourname' }
+    ] },
+    { title: 'Join page', note: '', fields: [
+      { k: 'join_looking_for', label: 'What you’re looking for right now', type: 'textarea', rows: 3 }
+    ] }
+  ];
+
+  var TABS = [
+    { id: 'settings', label: 'Site text' },
+    { id: 'episodes', label: 'Episodes' },
+    { id: 'raw', label: 'Raw footage' },
+    { id: 'articles', label: 'Articles' },
+    { id: 'staff', label: 'Staff' },
+    { id: 'inbox', label: 'Inbox' },
+    { id: 'help', label: 'Help' }
+  ];
+
+  // ---------- State ----------
+  var PASS = '';
+  var data = null;
+  var tab = 'settings';
+  var dirty = {};
+  var saving = false;
+
+  // ---------- API ----------
+  function api(action, payload) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 40000);
+    var body = JSON.stringify(Object.assign({ action: action, passphrase: PASS }, payload || {}));
+    return fetch(API, { method: 'POST', body: body, signal: ctrl.signal })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        clearTimeout(timer);
+        if (!j.ok) throw new Error(j.error || 'Something went wrong.');
+        return j;
+      })
+      .catch(function (e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') throw new Error('That took too long. Check your connection and try again.');
+        if (e instanceof TypeError) throw new Error('Couldn’t reach the server. Check your connection and the URL in tar-config.js.');
+        throw e;
+      });
+  }
+
+  // ---------- Lock / unlock ----------
+  function normalize(j) {
+    var d = { settings: j.settings || {}, leads: j.leads || [], applications: j.applications || [] };
+    Object.keys(COLL).forEach(function (n) {
+      d[n] = (j[n] || []).map(function (r) { r._k = uid(); return r; });
+    });
+    return d;
+  }
+
+  function unlock(pw) {
+    PASS = pw;
+    return api('admin_content').then(function (j) {
+      data = normalize(j);
+      try { sessionStorage.setItem('tar_pw', pw); } catch (e) {}
+      $('#lock').hidden = true;
+      $('#app').hidden = false;
+      renderTabs();
+      renderTab();
+    });
+  }
+
+  function showLockError(msg) { $('#lockError').textContent = msg || ''; }
+
+  $('#lockForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!CONNECTED) { showLockError('Not connected yet. Paste your Apps Script URL into tar-config.js first.'); return; }
+    var btn = $('#unlockBtn');
+    btn.disabled = true; btn.textContent = 'Checking…'; showLockError('');
+    unlock($('#pw').value).catch(function (e) {
+      PASS = '';
+      showLockError(e.message);
+    }).then(function () { btn.disabled = false; btn.textContent = 'Unlock'; });
+  });
+
+  $('#lockBtn').addEventListener('click', function () {
+    if (Object.keys(dirty).length && !confirm('You have unsaved changes. Lock anyway?')) return;
+    try { sessionStorage.removeItem('tar_pw'); } catch (e) {}
+    dirty = {};
+    location.reload();
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (Object.keys(dirty).length) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // ---------- Tabs ----------
+  function unreadCount() {
+    var f = function (m) { return m.status !== 'done'; };
+    return data ? data.leads.filter(f).length + data.applications.filter(f).length : 0;
+  }
+
+  function renderTabs() {
+    $('#tabs').innerHTML = TABS.map(function (t) {
+      var extra = '';
+      if (dirty[t.id]) extra = '<span class="dot" title="Unsaved changes"></span>';
+      else if (t.id === 'inbox' && unreadCount()) extra = '<span class="count">' + unreadCount() + '</span>';
+      return '<button class="tab' + (t.id === tab ? ' active' : '') + '" data-tab="' + t.id + '" type="button">' + esc(t.label) + extra + '</button>';
+    }).join('');
+  }
+
+  function updateSaveBar() {
+    var editable = tab === 'settings' || !!COLL[tab];
+    $('#savebar').hidden = !editable;
+    if (!editable) return;
+    var isDirty = !!dirty[tab];
+    var st = $('#savestate');
+    st.textContent = saving ? 'Saving…' : (isDirty ? 'You have unsaved changes' : 'All changes saved');
+    st.className = isDirty && !saving ? 'unsaved' : '';
+    $('#saveBtn').disabled = !isDirty || saving;
+  }
+
+  function markDirty() {
+    dirty[tab] = true;
+    renderTabs();
+    updateSaveBar();
+  }
+
+  function renderTab() {
+    var p = $('#panel');
+    if (tab === 'settings') p.innerHTML = settingsHTML();
+    else if (COLL[tab]) renderCollection(tab, {});
+    else if (tab === 'inbox') p.innerHTML = inboxHTML();
+    else p.innerHTML = helpHTML();
+    renderTabs();
+    updateSaveBar();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- Fields ----------
+  function fieldHTML(f, val) {
+    var help = f.help ? '<span class="help">' + esc(f.help) + '</span>' : '';
+    if (f.type === 'bool') {
+      return '<label class="check"><input type="checkbox" data-k="' + f.k + '"' + (isTrue(val) ? ' checked' : '') + '><span>' + esc(f.label) + help + '</span></label>';
+    }
+    var cls = 'field' + (f.half ? ' half' : '');
+    var control;
+    if (f.type === 'textarea') {
+      control = '<textarea data-k="' + f.k + '" rows="' + (f.rows || 4) + '">' + esc(val) + '</textarea>';
+    } else {
+      control = '<input type="' + f.type + '" data-k="' + f.k + '" value="' + esc(val) + '"' + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : '') + (f.type === 'url' ? ' inputmode="url" autocapitalize="off"' : '') + '>';
+    }
+    return '<label class="' + cls + '"><span>' + esc(f.label) + '</span>' + control + help + '</label>';
+  }
+
+  // ---------- Settings panel ----------
+  function settingsHTML() {
+    var out = '<div class="panel-head"><h2>Site text</h2><p>The words at the top of the home page, the Who We Are page, and the links used around the site.</p></div>';
+    SETTINGS.forEach(function (g) {
+      out += '<section class="group"><h3>' + esc(g.title) + '</h3>' + (g.note ? '<p>' + esc(g.note) + '</p>' : '<p></p>') + '<div class="fields">';
+      g.fields.forEach(function (f) { out += fieldHTML(f, data.settings[f.k] || '').replace('data-k=', 'data-s='); });
+      out += '</div></section>';
+    });
+    return out;
+  }
+
+  // ---------- Collection panels ----------
+  function chipsHTML(name, r) {
+    var c = [];
+    if (!isTrue(r.published)) c.push('<span class="chip draft">Draft</span>');
+    if (name === 'articles' && isTrue(r.featured)) c.push('<span class="chip on">Feature</span>');
+    if (COLL[name].fields.some(function (f) { return f.k === 'home'; }) && isTrue(r.home)) c.push('<span class="chip on">On home page</span>');
+    return c.join('');
+  }
+
+  function itemHTML(name, r, idx, open, total) {
+    var c = COLL[name];
+    return '<details class="item" data-idx="' + idx + '" data-key="' + r._k + '"' + (open ? ' open' : '') + '>' +
+      '<summary><span class="sum-title">' + esc(c.titleOf(r)) + '</span><span class="chips">' + chipsHTML(name, r) + '</span></summary>' +
+      '<div class="item-body"><div class="fields">' +
+      c.fields.map(function (f) { return fieldHTML(f, r[f.k]); }).join('') +
+      '</div><div class="item-actions">' +
+      '<button class="btn ghost" type="button" data-act="up"' + (idx === 0 ? ' disabled' : '') + '>Move up</button>' +
+      '<button class="btn ghost" type="button" data-act="down"' + (idx === total - 1 ? ' disabled' : '') + '>Move down</button>' +
+      '<button class="btn danger" type="button" data-act="del">Delete</button>' +
+      '</div></div></details>';
+  }
+
+  function openKeys() {
+    var s = {};
+    Array.prototype.forEach.call(document.querySelectorAll('details.item[open]'), function (d) { s[d.dataset.key] = true; });
+    return s;
+  }
+
+  function renderCollection(name, open) {
+    var c = COLL[name];
+    var list = data[name];
+    var html = '<div class="panel-head"><h2>' + esc(c.label) + '</h2><p>' + esc(c.blurb) + '</p></div>';
+    html += list.length
+      ? list.map(function (r, i) { return itemHTML(name, r, i, !!open[r._k], list.length); }).join('')
+      : '<p class="empty">Nothing here yet. Add the first one below.</p>';
+    html += '<button class="add" type="button" data-act="add">Add ' + esc(c.single) + '</button>';
+    $('#panel').innerHTML = html;
+  }
+
+  function blankItem(name) {
+    var o = { id: '', _k: uid() };
+    COLL[name].fields.forEach(function (f) { o[f.k] = f.type === 'bool' ? (f.def || 'FALSE') : ''; });
+    return o;
+  }
+
+  // ---------- Inbox ----------
+  function fmtDate(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  }
+  function linkOrText(v) {
+    return /^https?:\/\//i.test(v) ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v) + '</a>' : esc(v);
+  }
+  function msgHTML(sheet, m) {
+    var done = m.status === 'done';
+    var isLead = sheet === 'leads';
+    var body = '';
+    if (isLead) {
+      body += '<p class="pre">' + esc(m.message) + '</p>';
+    } else {
+      body += '<p><strong>Skills:</strong> ' + esc(m.skills) + '</p>';
+      if (m.link) body += '<p><strong>Work sample:</strong> ' + linkOrText(m.link) + '</p>';
+      if (m.message) body += '<p class="pre">' + esc(m.message) + '</p>';
+    }
+    var sub = isLead ? m.topic : m.role;
+    return '<article class="msg' + (done ? ' done' : '') + '" data-sheet="' + sheet + '" data-row="' + m._row + '" data-received="' + esc(m.received) + '">' +
+      '<div class="msg-head"><strong>' + esc(m.name || 'No name given') + '</strong>' +
+      '<a href="mailto:' + esc(m.email) + '">' + esc(m.email) + '</a>' +
+      (sub ? '<span>' + esc(sub) + '</span>' : '') +
+      (isLead && isTrue(m.anonymous) ? '<span class="chip draft">Asked to stay anonymous</span>' : '') +
+      '<span class="when">' + esc(fmtDate(m.received)) + '</span></div>' + body +
+      '<div class="item-actions">' +
+      '<button class="btn ghost" type="button" data-act="' + (done ? 'msg-new' : 'msg-done') + '">' + (done ? 'Mark as new' : 'Mark as done') + '</button>' +
+      '<button class="btn danger" type="button" data-act="msg-del">Delete</button></div></article>';
+  }
+  function inboxHTML() {
+    var sec = function (title, sheet, emptyMsg) {
+      var list = data[sheet].slice().reverse();
+      return '<section class="inbox-sec"><h3>' + title + '</h3>' +
+        (list.length ? list.map(function (m) { return msgHTML(sheet, m); }).join('') : '<p class="empty">' + emptyMsg + '</p>') + '</section>';
+    };
+    return '<div class="panel-head"><h2>Inbox</h2><p>Everything sent through the Contact and Join forms on the site. Newest first.</p></div>' +
+      sec('Story leads and messages', 'leads', 'No messages yet.') +
+      sec('Join applications', 'applications', 'No applications yet.');
+  }
+  function msgOp(el, op) {
+    var sheet = el.dataset.sheet, row = Number(el.dataset.row), received = el.dataset.received;
+    if (op === 'delete' && !confirm('Delete this message for good?')) return;
+    api('inbox_update', { sheet: sheet, row: row, received: received, op: op }).then(function () {
+      var list = data[sheet];
+      var i = -1;
+      list.forEach(function (m, n) { if (m._row === row && m.received === received) i = n; });
+      if (i > -1) {
+        if (op === 'delete') {
+          list.splice(i, 1);
+          list.forEach(function (m) { if (m._row > row) m._row--; });
+        } else {
+          list[i].status = op;
+        }
+      }
+      renderTab();
+    }).catch(function (e) { toast(e.message, true); });
+  }
+
+  // ---------- Help ----------
+  function helpHTML() {
+    return '<div class="panel-head"><h2>Help</h2></div><div class="help-body">' +
+      '<h3>Changing something</h3><ul>' +
+      '<li>Pick a tab, change what you want, then press <strong>Save changes</strong>. The live site shows it the next time someone loads the page.</li>' +
+      '<li>Nothing changes on the site until you save. A dot on a tab means it has unsaved changes.</li></ul>' +
+      '<h3>Drafts and ordering</h3><ul>' +
+      '<li>Uncheck <strong>Published</strong> to hide an item without deleting it.</li>' +
+      '<li>Items appear on the site in the order shown here. Use Move up and Move down to reorder.</li></ul>' +
+      '<h3>The home page feed</h3><ul>' +
+      '<li>Check <strong>Show on the home page</strong> on any episode, raw footage or article. Up to eight show, newest date first.</li></ul>' +
+      '<h3>Links</h3><ul>' +
+      '<li>Video and article links open in a new tab. If you leave the link empty, the title just isn’t clickable.</li></ul>' +
+      '<h3>Forms</h3><ul>' +
+      '<li>The Contact and Join forms save into the Inbox tab. Delete a message here once you’ve dealt with it.</li></ul>' +
+      '<h3>Editing the Sheet directly</h3><ul>' +
+      '<li>The Google Sheet holds the same content, one tab per section. You can edit it there too. Don’t rename the tabs or the header row.</li></ul>' +
+      '<h3>Locking up</h3><ul>' +
+      '<li>Press <strong>Lock</strong> at the top when you’re done, especially on a shared computer.</li></ul></div>';
+  }
+
+  // ---------- Toast ----------
+  var toastTimer;
+  function toast(msg, isErr) {
+    var t = $('#toast');
+    t.textContent = msg;
+    t.className = isErr ? 'err' : '';
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, isErr ? 7000 : 3500);
+  }
+
+  // ---------- Save ----------
+  function strip(name, r) {
+    var o = { id: r.id };
+    COLL[name].fields.forEach(function (f) { o[f.k] = r[f.k]; });
+    return o;
+  }
+
+  function save() {
+    if (saving || !dirty[tab]) return;
+    var current = tab;
+    saving = true; updateSaveBar();
+    var req;
+    if (current === 'settings') {
+      var rows = [];
+      SETTINGS.forEach(function (g) { g.fields.forEach(function (f) { rows.push({ key: f.k, value: data.settings[f.k] || '' }); }); });
+      req = api('save', { sheet: 'settings', rows: rows }).then(function (j) { data.settings = j.settings || data.settings; });
+    } else {
+      req = api('save', { sheet: current, rows: data[current].map(function (r) { return strip(current, r); }) }).then(function (j) {
+        data[current] = j.rows.map(function (r) { r._k = uid(); return r; });
+      });
+    }
+    req.then(function () {
+      delete dirty[current];
+      toast('Saved. The live site is up to date.');
+    }).catch(function (e) {
+      toast(e.message, true);
+    }).then(function () {
+      saving = false;
+      if (tab === current && current !== 'settings') renderTab(); else { renderTabs(); updateSaveBar(); }
+    });
+  }
+
+  // ---------- Events ----------
+  $('#saveBtn').addEventListener('click', save);
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's' && !$('#app').hidden) { e.preventDefault(); save(); }
+  });
+
+  function onEdit(ev) {
+    var t = ev.target;
+    if (!t.dataset) return;
+    var value = t.type === 'checkbox' ? (t.checked ? 'TRUE' : 'FALSE') : t.value;
+
+    if (t.dataset.s) {                       // site text
+      if (data.settings[t.dataset.s] === value) return;
+      data.settings[t.dataset.s] = value;
+      markDirty();
+      return;
+    }
+    if (!t.dataset.k) return;
+    var item = t.closest('details.item');
+    if (!item || !COLL[tab]) return;
+    var idx = Number(item.dataset.idx);
+    var row = data[tab][idx];
+    if (!row || row[t.dataset.k] === value) return;
+    row[t.dataset.k] = value;
+
+    if (tab === 'articles' && t.dataset.k === 'featured' && value === 'TRUE') {
+      data.articles.forEach(function (r, i) { if (i !== idx) r.featured = 'FALSE'; });
+      Array.prototype.forEach.call(document.querySelectorAll('details.item'), function (d) {
+        var cb = d.querySelector('input[data-k=featured]');
+        if (cb && d !== item) cb.checked = false;
+        var i = Number(d.dataset.idx);
+        d.querySelector('.chips').innerHTML = chipsHTML(tab, data.articles[i]);
+      });
+    }
+    item.querySelector('.sum-title').textContent = COLL[tab].titleOf(row);
+    item.querySelector('.chips').innerHTML = chipsHTML(tab, row);
+    markDirty();
+  }
+  document.addEventListener('input', onEdit);
+  document.addEventListener('change', onEdit);
+
+  document.addEventListener('click', function (ev) {
+    var tb = ev.target.closest('[data-tab]');
+    if (tb) { tab = tb.dataset.tab; renderTab(); return; }
+
+    var b = ev.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.dataset.act;
+
+    if (act.indexOf('msg-') === 0) {
+      var m = b.closest('.msg');
+      msgOp(m, act === 'msg-del' ? 'delete' : act === 'msg-done' ? 'done' : 'new');
+      return;
+    }
+
+    if (!COLL[tab]) return;
+    var list = data[tab];
+    var item = b.closest('details.item');
+    var idx = item ? Number(item.dataset.idx) : -1;
+
+    if (act === 'add') {
+      var open = openKeys();
+      var n = blankItem(tab);
+      list.push(n);
+      open[n._k] = true;
+      markDirty();
+      renderCollection(tab, open);
+      var el = document.querySelector('details.item[data-key="' + n._k + '"]');
+      if (el) { el.scrollIntoView({ block: 'center' }); var first = el.querySelector('input[type=text]'); if (first) first.focus({ preventScroll: true }); }
+    } else if (act === 'del') {
+      if (!confirm('Delete “' + COLL[tab].titleOf(list[idx]) + '”? It is removed from the site once you save.')) return;
+      var o1 = openKeys();
+      list.splice(idx, 1);
+      markDirty();
+      renderCollection(tab, o1);
+    } else if (act === 'up' || act === 'down') {
+      var to = act === 'up' ? idx - 1 : idx + 1;
+      if (to < 0 || to >= list.length) return;
+      var o2 = openKeys();
+      var tmp = list[idx]; list[idx] = list[to]; list[to] = tmp;
+      markDirty();
+      renderCollection(tab, o2);
+      var moved = document.querySelector('details.item[data-key="' + list[to]._k + '"]');
+      if (moved) moved.scrollIntoView({ block: 'nearest' });
+    }
+  });
+
+  // ---------- Start ----------
+  if (!CONNECTED) {
+    showLockError('Not connected yet. Paste your Apps Script URL into tar-config.js first.');
+  } else {
+    var saved = '';
+    try { saved = sessionStorage.getItem('tar_pw') || ''; } catch (e) {}
+    if (saved) {
+      unlock(saved).catch(function (e) { PASS = ''; try { sessionStorage.removeItem('tar_pw'); } catch (x) {} showLockError(e.message); });
+    }
+  }
+})();
+</script>
+</body>
+</html>
